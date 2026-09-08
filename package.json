@@ -32,6 +32,9 @@
   "dependencies": {
     "@apocaliss92/nodelink-js": "^0.7.0"
   },
+  "overrides": {
+    "fast-xml-parser": "^5.11.1"
+  },
   "devDependencies": {
     "@types/node": "^20.14.0",
     "homebridge": "^1.8.0",
