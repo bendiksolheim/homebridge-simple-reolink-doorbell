@@ -1,0 +1,61 @@
+{
+  "pluginAlias": "ReolinkDoorbell",
+  "pluginType": "platform",
+  "singular": true,
+  "headerDisplay": "Exposes Reolink doorbell button presses as native HomeKit Doorbell accessories via the Baichuan protocol (port 9000). Requires a local username/password on the camera — the same ones used in the Reolink app.",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "doorbells": {
+        "type": "array",
+        "title": "Doorbells",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string",
+              "default": "Front Door",
+              "required": true
+            },
+            "host": {
+              "title": "IP Address",
+              "type": "string",
+              "required": true,
+              "format": "ipv4"
+            },
+            "port": {
+              "title": "Baichuan Port",
+              "type": "integer",
+              "default": 9000,
+              "required": true
+            },
+            "username": {
+              "title": "Username",
+              "type": "string",
+              "default": "admin",
+              "required": true
+            },
+            "password": {
+              "title": "Password",
+              "type": "string",
+              "required": true
+            },
+            "channel": {
+              "title": "Channel (0 for a standalone doorbell)",
+              "type": "integer",
+              "default": 0
+            },
+            "ringThrottleSeconds": {
+              "title": "Ignore repeat rings for (seconds)",
+              "type": "integer",
+              "default": 3,
+              "description": "Guards against a single button press firing multiple rapid ring events."
+            }
+          },
+          "required": ["name", "host", "username", "password"]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "displayName": "Homebridge Reolink Doorbell",
+  "name": "homebridge-reolink-doorbell",
+  "version": "0.1.0",
+  "description": "Exposes a Reolink video doorbell's button press as a native HomeKit Doorbell accessory, using the Reolink Baichuan protocol for instant, push-based ring events (no polling).",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/Ultra-Sack/homebridge-reolink-doorbell.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Ultra-Sack/homebridge-reolink-doorbell/issues"
+  },
+  "engines": {
+    "node": "^18.20.4 || ^20.18.0 || ^22.10.0",
+    "homebridge": "^1.8.0 || ^2.0.0"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "rimraf ./dist && tsc",
+    "watch": "npm run build && npm link && nodemon",
+    "lint": "eslint src/**.ts",
+    "prepublishOnly": "npm run lint && npm run build"
+  },
+  "keywords": [
+    "homebridge-plugin",
+    "reolink",
+    "doorbell",
+    "homekit",
+    "baichuan"
+  ],
+  "dependencies": {
+    "@apocaliss92/nodelink-js": "^0.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "homebridge": "^1.8.0",
+    "nodemon": "^3.1.0",
+    "rimraf": "^5.0.7",
+    "typescript": "^5.5.0"
+  }
+}
