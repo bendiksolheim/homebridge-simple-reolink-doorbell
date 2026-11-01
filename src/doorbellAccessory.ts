@@ -1,15 +1,33 @@
-import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
+import {
+  CameraStreamingDelegate,
+  DoorbellController,
+  PlatformAccessory,
+  PrepareStreamCallback,
+  PrepareStreamRequest,
+  Service,
+  SnapshotRequest,
+  SnapshotRequestCallback,
+  StreamingRequest,
+  StreamRequestCallback,
+} from 'homebridge';
 import { ReolinkBaichuanApi } from '@apocaliss92/nodelink-js';
 import { ReolinkDoorbellPlatform } from './platform';
 import { DoorbellConfig } from './settings';
+import { PLACEHOLDER_SNAPSHOT } from './placeholder';
 
 /**
  * One instance of this class is created per configured doorbell.
  * It holds a persistent Baichuan connection to the camera and rings
  * the HomeKit Doorbell service whenever a `doorbell` event arrives.
+ *
+ * HomeKit only supports a Doorbell service that sits on the same accessory
+ * as a camera, so this also exposes a placeholder camera: snapshots are
+ * fetched from the doorbell (falling back to a blank image), and live
+ * streaming is refused.
  */
-export class DoorbellAccessory {
+export class DoorbellAccessory implements CameraStreamingDelegate {
   private doorbellService: Service;
+  private controller: DoorbellController;
   private api: ReolinkBaichuanApi;
   private channel: number;
   private throttleMs: number;
@@ -26,6 +44,7 @@ export class DoorbellAccessory {
     this.throttleMs = (config.ringThrottleSeconds ?? 3) * 1000;
 
     const { Characteristic } = this.platform;
+    const hap = this.platform.api.hap;
 
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(Characteristic.Manufacturer, 'Reolink')
@@ -38,11 +57,28 @@ export class DoorbellAccessory {
 
     this.doorbellService.setCharacteristic(Characteristic.Name, config.name);
 
-    // Required on the Doorbell service even though this accessory has no
-    // physical mute control - HomeKit expects it to be present.
-    this.doorbellService
-      .getCharacteristic(Characteristic.ProgrammableSwitchEvent)
-      .onGet((): CharacteristicValue => Characteristic.ProgrammableSwitchEvent.SINGLE_PRESS);
+    // The streaming options only need to be valid enough for HomeKit to
+    // accept the camera - no stream is ever actually started.
+    this.controller = new hap.DoorbellController({
+      cameraStreamCount: 1,
+      delegate: this,
+      externalDoorbellService: this.doorbellService,
+      streamingOptions: {
+        supportedCryptoSuites: [hap.SRTPCryptoSuites.AES_CM_128_HMAC_SHA1_80],
+        video: {
+          codec: {
+            profiles: [hap.H264Profile.BASELINE, hap.H264Profile.MAIN, hap.H264Profile.HIGH],
+            levels: [hap.H264Level.LEVEL3_1, hap.H264Level.LEVEL3_2, hap.H264Level.LEVEL4_0],
+          },
+          resolutions: [
+            [1280, 720, 30],
+            [640, 360, 30],
+            [320, 180, 30],
+          ],
+        },
+      },
+    });
+    this.accessory.configureController(this.controller);
 
     this.api = new ReolinkBaichuanApi({
       host: config.host,
@@ -110,10 +146,30 @@ export class DoorbellAccessory {
     this.lastRing = now;
 
     this.platform.log.info(`[${this.config.name}] Doorbell rang`);
-    this.doorbellService.updateCharacteristic(
-      this.platform.Characteristic.ProgrammableSwitchEvent,
-      this.platform.Characteristic.ProgrammableSwitchEvent.SINGLE_PRESS,
-    );
+    this.controller.ringDoorbell();
+  }
+
+  async handleSnapshotRequest(_request: SnapshotRequest, callback: SnapshotRequestCallback): Promise<void> {
+    if (!this.api.isReady) {
+      callback(undefined, PLACEHOLDER_SNAPSHOT);
+      return;
+    }
+    try {
+      // HomeKit gives up on snapshots after a few seconds, so keep this short.
+      const snapshot = await this.api.getSnapshot(this.channel, { timeoutMs: 4000 });
+      callback(undefined, snapshot);
+    } catch (err) {
+      this.platform.log.debug(`[${this.config.name}] Snapshot failed, using placeholder: ${(err as Error).message}`);
+      callback(undefined, PLACEHOLDER_SNAPSHOT);
+    }
+  }
+
+  prepareStream(_request: PrepareStreamRequest, callback: PrepareStreamCallback): void {
+    callback(new Error('Live video is not supported by this plugin'));
+  }
+
+  handleStreamRequest(_request: StreamingRequest, callback: StreamRequestCallback): void {
+    callback(new Error('Live video is not supported by this plugin'));
   }
 
   public isConnected(): boolean {

@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "ReolinkDoorbell",
+  "pluginAlias": "SimpleReolinkDoorbell",
   "pluginType": "platform",
   "singular": true,
   "headerDisplay": "Exposes Reolink doorbell button presses as native HomeKit Doorbell accessories via the Baichuan protocol (port 9000). Requires a local username/password on the camera — the same ones used in the Reolink app.",
